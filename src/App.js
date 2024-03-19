@@ -60,9 +60,8 @@ async function getData() {
 }
 
 const App = () => {
-    const [stickyLabel, setStickyLabel] = useState(null);
-    const [isLoading, setLoading] = useState(false);
-    const [data, setData] = useState(null);
+    const [isLoading, setLoading] = useState(true);
+    const [data, setData] = useState([]);
 
     useEffect(() => {
         async function fetchData() {
@@ -74,7 +73,7 @@ const App = () => {
         fetchData();
     }, []);
 
-    return <div>{!isLoading && data.map(({ coin, data }) => <MyChart coin={coin} data={data} />)}</div>;
+    return <div>{isLoading ? <div>Loading...</div> : data.map(({ coin, data }) => <MyChart coin={coin} data={data} />)}</div>;
 };
 
 const MyChart = ({ data, coin }) => {
