@@ -7,52 +7,37 @@ import axios from 'axios';
 // Initialize Highcharts modules
 HC_exporting(Highcharts);
 
-async function getChart(exchange, fromCoin) {
-    const response = await axios.get(`https://api.coin-stats.com/v2/candle_chart?type=3m&fromCoin=${fromCoin}&toCoin=USDT&exchange=${exchange}`);
-    return response.data.candleChart;
+async function getChart() {
+    try {
+        const time_start = new Date();
+        time_start.setMonth(time_start.getMonth() - 6);
+        const time_end = new Date();
+        const response = await axios.post(`https://dev6api.coinstats.app/proxy`, {
+            url: `https://pro-api.coinmarketcap.com/v1/exchange/quotes/historical?CMC_PRO_API_KEY=8d137727-077e-47d6-8fe2-4b6d0533788a&slug=bybit,okx,kucoin,gate-io,mexc&interval=daily&time_start=${time_start.getTime()}&time_end=${time_end.getTime()}`,
+        });
+        return response.data.data;
+    } catch (error) {
+        console.error(error);
+    }
 }
-
-const exchanges = [{ name: 'Bybit' }, { name: 'Kucoin' }, { name: 'Gate.io' }, { name: 'Mexc' }, { name: 'OKEX' }];
-
-const coins = [
-    {
-        fromCoin: 'MEE',
-    },
-    {
-        fromCoin: 'VR',
-    },
-    {
-        fromCoin: 'NADA',
-    },
-    {
-        fromCoin: 'ORNJ',
-    },
-    {
-        fromCoin: 'XCH',
-    },
-];
 
 async function getData() {
     const allData = [];
 
-    for (const coin of coins) {
-        const data = await Promise.all(
-            exchanges.map(async (exchange) => {
-                const chart = await getChart(exchange.name, coin.fromCoin);
-                return {
-                    name: exchange.name,
-                    data: chart.map(([date, start, end, min, max]) => [date * 1000, end]),
-                    tooltip: {
-                        valueDecimals: 8,
-                    },
-                };
-            })
-        );
+    const res = await getChart();
 
-        allData.push({
-            coin: coin.fromCoin,
-            data,
-        });
+    for (const exchange in res) {
+        const chart = res[exchange].quotes;
+
+        const data = {
+            name: exchange,
+            data: chart.map(({ timestamp, quote }) => [new Date(timestamp).getTime(), quote.USD.volume_24h]),
+            tooltip: {
+                valueDecimals: 0,
+            },
+        };
+
+        allData.push(data);
     }
 
     console.log(allData);
@@ -73,20 +58,20 @@ const App = () => {
         fetchData();
     }, []);
 
-    return <div>{isLoading ? <div>Loading...</div> : data.map(({ coin, data }) => <MyChart coin={coin} data={data} />)}</div>;
+    return <div>{isLoading ? <div>Loading...</div> : <MyChart data={data} />}</div>;
 };
 
-const MyChart = ({ data, coin }) => {
+const MyChart = ({ data }) => {
     const options = {
         chart: {
-            height: 1000,
+            height: 900,
             scrollablePlotArea: {
                 minWidth: 700,
             },
         },
         series: data,
         title: {
-            text: ` ${coin} coin prices`,
+            text: 'Exchange Volumes',
             align: 'left',
         },
         // subtitle: {
@@ -122,7 +107,7 @@ const MyChart = ({ data, coin }) => {
         // },
         yAxis: {
             title: {
-                text: 'Price',
+                text: 'Volume (USD)',
             },
             labels: {
                 style: {
