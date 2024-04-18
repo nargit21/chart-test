@@ -7,13 +7,23 @@ import axios from 'axios';
 // Initialize Highcharts modules
 HC_exporting(Highcharts);
 
+const exchangeList = ['binance', 'coinbase-exchange', 'upbit', 'bybit', 'gate-io', 'kucoin', 'okx', 'mexc', 'lbank', 'bitmart', 'bithumb', 'bitget', 'htx'];
+
 async function getChart() {
     try {
         const time_start = new Date();
         time_start.setMonth(time_start.getMonth() - 6);
         const time_end = new Date();
+        const query = {
+            CMC_PRO_API_KEY: '8d137727-077e-47d6-8fe2-4b6d0533788a',
+            interval: 'daily',
+            time_start: time_start.getTime(),
+            time_end: time_end.getTime(),
+            slug: exchangeList.join(','),
+        };
+
         const response = await axios.post(`https://dev6api.coinstats.app/proxy`, {
-            url: `https://pro-api.coinmarketcap.com/v1/exchange/quotes/historical?CMC_PRO_API_KEY=8d137727-077e-47d6-8fe2-4b6d0533788a&slug=bybit,okx,kucoin,gate-io,mexc&interval=daily&time_start=${time_start.getTime()}&time_end=${time_end.getTime()}`,
+            url: `https://pro-api.coinmarketcap.com/v1/exchange/quotes/historical?${new URLSearchParams(query).toString()}`,
         });
         return response.data.data;
     } catch (error) {
@@ -41,7 +51,12 @@ async function getData() {
     }
 
     console.log(allData);
+    allData.sort((a, b) => b.data[b.data.length - 1][1] - a.data[a.data.length - 1][1]);
     return allData;
+}
+
+function capitalizeFirstLetter(string) {
+    return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
 const App = () => {
@@ -58,7 +73,7 @@ const App = () => {
         fetchData();
     }, []);
 
-    return <div>{isLoading ? <div>Loading...</div> : <MyChart data={data} />}</div>;
+    return <div>{isLoading ? <div>Loading...</div> : data.map((el) => <MyChart data={[el]} />)}</div>;
 };
 
 const MyChart = ({ data }) => {
@@ -71,7 +86,7 @@ const MyChart = ({ data }) => {
         },
         series: data,
         title: {
-            text: 'Exchange Volumes',
+            text: capitalizeFirstLetter(`${data[0].name} Volume`),
             align: 'left',
         },
         // subtitle: {
